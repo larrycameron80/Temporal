@@ -1,14 +1,21 @@
 package lp
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/RTradeLtd/Temporal/utils"
 	libp2p "github.com/libp2p/go-libp2p"
 	ci "github.com/libp2p/go-libp2p-crypto"
 	host "github.com/libp2p/go-libp2p-host"
+	net "github.com/libp2p/go-libp2p-net"
+)
+
+const (
+	TemporalProtocol = "/temporal/1.0.0"
 )
 
 // LibPeerManager is a generalized Temporal libp2p host
@@ -28,6 +35,25 @@ func GenerateLibPeerManager(listenAddress string, keyType, keyBits int) (*LibPee
 		Host:       host,
 	}
 	return &lpm, nil
+}
+
+func (lpm *LibPeerManager) Run(targetAddress string) {
+	if targetAddress == "" {
+		// run for select
+		for {
+		}
+	}
+}
+func (lpm *LibPeerManager) GenerateTemporalProtocol() {
+	lpm.Host.SetStreamHandler(TemporalProtocol, func(s net.Stream) {
+		log.Println("Got a new stream!")
+		if err := doEcho(s); err != nil {
+			log.Println(err)
+			s.Reset()
+		} else {
+			s.Close()
+		}
+	})
 }
 
 // InitBasicHost is used to generate a basic host
@@ -74,4 +100,18 @@ func initCustomHost(listenAddress string, keyType, keyBits int) (host.Host, ci.P
 	}
 
 	return host, pk, nil
+}
+
+// doEcho reads a line of data a stream and writes it back
+// borrowed from https://github.com/libp2p/go-libp2p/blob/master/examples/echo/main.go
+func doEcho(s net.Stream) error {
+	buf := bufio.NewReader(s)
+	str, err := buf.ReadString('\n')
+	if err != nil {
+		return err
+	}
+
+	log.Printf("read: %s\n", str)
+	_, err = s.Write([]byte(str))
+	return err
 }

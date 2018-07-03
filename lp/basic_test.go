@@ -1,6 +1,7 @@
 package lp
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 
 var (
 	listenAddress = "/ip4/0.0.0.0/tcp/9090"
+	targetAddress = "/ip4/127.0.0.1/9090"
 )
 
 func TestInitBasicHost(t *testing.T) {
@@ -19,13 +21,18 @@ func TestInitBasicHost(t *testing.T) {
 }
 
 func TestInitCustomHost(t *testing.T) {
-	host, _, err := initCustomHost(listenAddress, ci.RSA, 2048)
+	lpm, err := GenerateLibPeerManager(listenAddress, ci.RSA, 1024)
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Printf("%+v\n", host)
-
-	for _, v := range host.Addrs() {
+	lpm.GenerateTemporalProtocol()
+	go func() { lpm.Run("") }()
+	for _, v := range lpm.Host.Addrs() {
 		fmt.Println(v)
+	}
+	p1 := lpm.Host.Peerstore().Peers()[0]
+	_, err = lpm.Host.NewStream(context.TODO(), p1, TemporalProtocol)
+	if err != nil {
+		t.Fatal(err)
 	}
 }
