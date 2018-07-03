@@ -2,8 +2,8 @@ package lp
 
 import (
 	"context"
-	"fmt"
 	"testing"
+	"time"
 
 	ci "github.com/libp2p/go-libp2p-crypto"
 )
@@ -21,18 +21,35 @@ func TestInitBasicHost(t *testing.T) {
 }
 
 func TestInitCustomHost(t *testing.T) {
+
+	go func() {
+		lpm, err := GenerateLibPeerManager(listenAddress, ci.RSA, 1024)
+		if err != nil {
+			t.Fatal(err)
+		}
+		lpm.GenerateTemporalProtocol()
+		go func() { lpm.Run("") }()
+		p1 := lpm.Host.Peerstore().Peers()[0]
+		lpm.Host.Peerstore().AddAddr(p1, lpm.Host.Addrs()[1], time.Hour)
+		_, err = lpm.Host.NewStream(context.TODO(), p1, TemporalProtocol)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for {
+		}
+	}()
 	lpm, err := GenerateLibPeerManager(listenAddress, ci.RSA, 1024)
 	if err != nil {
 		t.Fatal(err)
 	}
 	lpm.GenerateTemporalProtocol()
 	go func() { lpm.Run("") }()
-	for _, v := range lpm.Host.Addrs() {
-		fmt.Println(v)
-	}
 	p1 := lpm.Host.Peerstore().Peers()[0]
+	lpm.Host.Peerstore().AddAddr(p1, lpm.Host.Addrs()[1], time.Hour)
 	_, err = lpm.Host.NewStream(context.TODO(), p1, TemporalProtocol)
 	if err != nil {
 		t.Fatal(err)
+	}
+	for {
 	}
 }
